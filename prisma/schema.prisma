@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Bill {
+  id                  String   @id @default(uuid())
+  wedding_id          String?
+  payment_date        DateTime
+  service_total_price Int
+  food_total_price    Int
+  total_price         Int
+  deposit_require     Int
+  deposit_amount      Int
+  remain_amount       Int
+  extra_fee           Int
+  created_at          DateTime @default(now())
+  updated_at          DateTime @default(now())
+  Wedding             Wedding?  @relation(fields: [wedding_id], references: [id], onDelete: SetNull)
+
+  @@index([wedding_id], map: "Bill_wedding_id_fkey")
+}
+model Customer {
+  id         String    @id @default(uuid())
+  name       String
+  phone      String    @unique
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  Wedding    Wedding[]
+}
+
+model Food {
+  id         String         @id @default(uuid())
+  name       String
+  price      Int
+  status     Boolean        @default(true)
+  created_at DateTime       @default(now())
+  updated_at DateTime       @default(now())
+  deleted_at DateTime?
+  inventory  Int
+  foodFiles  FoodFileLink[]
+}
+
+model FoodOrder {
+  id         String   @id @default(uuid())
+  food_id    String
+  food_name  String
+  food_price Int
+  count      Int
+  note       String?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  wedding_id String
+  Wedding    Wedding  @relation(fields: [wedding_id], references: [id])
+
+  @@index([wedding_id], map: "FoodOrder_wedding_id_fkey")
+}
+
+model LobType {
+  id              String    @id @default(uuid())
+  max_table_count Int
+  min_table_price Int
+  deposit_percent Int       @default(30)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now())
+  type_name       String
+  deleted_at      DateTime?
+  Lobby           Lobby[]
+}
+
+model Lobby {
+  id          String    @id @default(uuid())
+  name        String
+  lob_type_id String
+  deleted_at  DateTime?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now())
+  LobType     LobType   @relation(fields: [lob_type_id], references: [id])
+  Wedding     Wedding[]
+
+  @@index([lob_type_id], map: "Lobby_lob_type_id_fkey")
+}
+
+model Service {
+  id           String            @id @default(uuid())
+  name         String
+  price        Int
+  status       Boolean
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @default(now())
+  deleted_at   DateTime?
+  inventory    Int
+  serviceFiles ServiceFileLink[]
+}
+
+model ServiceOrder {
+  id            String   @id @default(uuid())
+  service_id    String
+  service_name  String
+  service_price Int
+  note          String?
+  count         Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+  wedding_id    String
+  Wedding       Wedding  @relation(fields: [wedding_id], references: [id])
+
+  @@index([wedding_id], map: "ServiceOrder_wedding_id_fkey")
+}
+
+model Permission {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  page           Permission_page  @unique
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @default(now())
+  RolePermission RolePermission[]
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now())
+  Permission    Permission @relation(fields: [permission_id], references: [id])
+  Role          Role       @relation(fields: [role_id], references: [id])
+
+  @@id([role_id, permission_id])
+  @@index([permission_id], map: "RolePermission_permission_id_fkey")
+}
+
+model Role {
+  id             String           @id @default(uuid())
+  name           String           @unique
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @default(now())
+  RolePermission RolePermission[]
+  User           User[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  display_name String
+  username     String   @unique
+  password     String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+  role_id      String?
+  Role         Role?    @relation(fields: [role_id], references: [id])
+
+  @@index([role_id], map: "Role_role_id_fkey")
+}
+
+model Wedding {
+  id              String         @id @default(uuid())
+  groom           String
+  bride           String
+  wedding_date    DateTime
+  shift_id        String
+  lobby_id        String
+  customer_id     String
+  table_count     Int
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @default(now())
+  note            String?
+  is_penalty_mode Boolean        @default(true)
+  Bill            Bill[]
+  FoodOrder       FoodOrder[]
+  ServiceOrder    ServiceOrder[]
+  Shift           Shift          @relation(fields: [shift_id], references: [id])
+  Customer        Customer       @relation(fields: [customer_id], references: [id])
+  Lobby           Lobby          @relation(fields: [lobby_id], references: [id])
+
+  @@index([shift_id], map: "Wedding_Shift_id_fkey")
+  @@index([customer_id], map: "Wedding_Customer_id_fkey")
+  @@index([lobby_id], map: "Wedding_lobby_id_fkey")
+}
+
+model Shift {
+  id    String  @id @default(uuid())
+  name  String
+  Wedding Wedding[]
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @default(now()) @updatedAt
+  deleted_at      DateTime?
+}
+model Image {
+  id           String            @id @default(uuid())
+  file_name    String
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @default(now()) @updatedAt
+  foodFiles    FoodFileLink[]
+  serviceFiles ServiceFileLink[]
+}
+
+model FoodFileLink {
+  file_id    String
+  food_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  image      Image    @relation(fields: [file_id], references: [id])
+  food       Food     @relation(fields: [food_id], references: [id])
+
+  @@id([food_id, file_id])
+  @@index([file_id], map: "FoodFileLink_file_id_fkey")
+}
+
+model ServiceFileLink {
+  file_id    String
+  service_id String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+  image      Image    @relation(fields: [file_id], references: [id])
+  service    Service  @relation(fields: [service_id], references: [id])
+
+  @@id([file_id, service_id])
+  @@index([service_id], map: "ServiceFileLink_service_id_fkey")
+}
+
+enum Permission_page {
+  report
+  user
+  lobby
+  order
+  food_service
+}
